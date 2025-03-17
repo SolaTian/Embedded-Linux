@@ -280,6 +280,80 @@ makefile 只有一个最终目标，其他的目标都是被这个目标连带�
 
 make 支持3个通配符，`*`,`?`,`~`。
 
-波浪号（ `~` ）字符在文件名中也有比较特殊的用途。如果是 `~/test` ，这就表示当前用户的 `$HOME` 目录下的`test`目录。而 `~hchen/test` 则表示用户`hchen`的宿主目录下的`test` 目录。（这些都是Unix下的小知识了，make也支持）而在 Windows 或是 MS-DOS下，用户没有宿主目录，那么波浪号所指的目录则根据环境变量`“HOME”`而定。
+波浪号（ `~` ）字符在文件名中也有比较特殊的用途。如果是 `~/test` ，这就表示当前用户的 `$HOME` 目录下的`test`目录。而 `~hchen/test` 则表示用户`hchen`的宿主目录下的`test` 目录。（这些都是 Unix 下的小知识了，make 也支持）而在 Windows 或是 MS-DOS下，用户没有宿主目录，那么波浪号所指的目录则根据环境变量`“HOME”`而定。
 
 通配符代替了你一系列的文件，如 `*.c` 表示所有后缀为`c`的文件。一个需要我们注意的是，如果我们的文件名中有通配符，如： `*` ，那么可以用转义字符 `\` ，如 `\*`来表示真实的 `*` 字符，而不是任意长度的字符串。
+
+### 文件搜寻
+
+在一些大的工程中，有大量的源文件，通常的做法是把这许多的源文件分类，并存放在不同的目录中。当 make 需要去找寻文件的依赖关系时，可以在文件前加上路径，但最好的方法是把一个路径告诉 make，让 make 在自动去找。
+
+makefile 文件中的特殊变量 `VPATH` 就是完成这个功能的，如果没有指明这个变量，make 只会在当前的目录中去找寻依赖文件和目标文件。如果定义了这个变量，那么，make 就会在当前目录找不到的情况下，到所指定的目录中去找寻文件了。
+
+    VPATH = src:../headers
+
+目录由“冒号”分隔。`“src”`和`“../headers”`，make 会按照这个顺序进行搜索。（当然，当前目录永远是最高优先搜索的地方）
+
+另一个设置文件搜索路径的方式是 make 中的 `vpath`关键字（全小写），它不是变量，是一个 make 的关键字。
+
+它的使用方式有 3 种
+
+    #为符合模式 <pattern> 的文件指定搜索目录 <directories>
+    vpath <pattern> <directories>
+
+    #清除符合模式 <pattern> 的文件的搜索目录
+    vpath <pattern>
+
+    #清除所有已被设置好了的文件搜索目录
+    vpath
+
+vpath使用方法中的 `<pattern>` 需要包含 % 字符。 % 的意思是匹配零或若干字符。
+
+    vpath %.h ../headers
+
+要求 make 在`“../headers”`目录下搜索所有以 .h 结尾的文件。（如果某文件在当前目录没有找到的话）
+
+
+### 伪目标
+
+先前提到的 `clean`的目标，是一个伪目标。伪目标不是一个文件，只是一个标签。由于“伪目标”不是文件，所以 make 无法生成它的依赖关系和决定它是否要执行。 只有显式的指明这个目标才能生效。
+
+伪目标的取名最好不要和文件名重名。有时为了避免两者重名，可以使用一个特殊的标记`.PHONY`来显式地指明一个目标是“伪目标”，向 make 说明，不管是否有这个文件，这个目标就是“伪目标”。
+
+    .PHONY : clean
+    clean :
+        rm *.o temp
+
+伪目标一般没有依赖的文件。但是也可以为伪目标指定所依赖的文件。伪目标同样可以作为“默认目标”，只要将其放在第一个。
+
+如果你的 makefile 需要一口气生成若干个可执行文件，但只想简单地敲一个 make 完事，并且，所有的目标文件都写在一个 makefile 中，那么可以使用“伪目标”这个特性：
+
+    all : prog1 prog2 prog3
+    .PHONY : all
+
+    prog1 : prog1.o utils.o
+        cc -o prog1 prog1.o utils.o
+
+    prog2 : prog2.o
+        cc -o prog2 prog2.o
+
+    prog3 : prog3.o sort.o utils.o
+        cc -o prog3 prog3.o sort.o utils.o
+
+makefile 的第一个目标总是被作为其默认目标。`all`伪目标依赖于其他 3 个目标。由于`all`又是一个伪目标，伪目标只是一个标签不会生成文件，所以不会有`all`文件产生。于是，其它三个目标的规则总是会被决议。也就达到了我们一口气生成多个目标的目的。
+
+显式`.PHONY : all` 不写的话一般情况也可以正确的执行，这样 make 可通过隐式规则推导出， `all` 是一个伪目标，执行 make 不会生成`all`文件，而执行后面的多个目标。建议：显式写出是一个好习惯。）
+
+    .PHONY : cleanall cleanobj cleandiff
+
+    cleanall : cleanobj cleandiff
+        rm program
+
+    cleanobj :
+        rm *.o
+
+    cleandiff :
+        rm *.diff
+
+`make cleanall`将清除所有要被清除的文件。`cleanobj`和`cleandiff`这两个伪目标有点像“子程序”的意思。我们可以输入`make cleanall`和`make cleanobj`和`make cleandiff`命令来达到清除不同种类文件的目的。
+
