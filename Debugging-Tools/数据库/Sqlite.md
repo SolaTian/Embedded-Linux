@@ -115,7 +115,7 @@ sqlite3 的基本用法是
 
     sqlite3 /dev/sdx
 
-/dev/sdx 表示硬盘对应的挂载文件名，可以是 sda，也可以是 sdb 等文件名。
+`/dev/sdx` 表示硬盘对应的挂载文件名，可以是 sda，也可以是 sdb 等文件名。
 
 出现例如下面的界面就表示进入 sqlite3 交互界面成功
 
