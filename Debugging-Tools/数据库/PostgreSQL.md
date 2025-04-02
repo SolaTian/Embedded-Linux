@@ -1,6 +1,30 @@
+- [PostgreSQL](#postgresql)
+  - [PostgreSQL 的非交互模式](#postgresql-的非交互模式)
+  - [PostgreSQL 的交互模式](#postgresql-的交互模式)
+    - [进入并查看数据库](#进入并查看数据库)
+    - [查看表](#查看表)
+    - [查询、插入、删除、更改语句](#查询插入删除更改语句)
+    - [退出交互模式](#退出交互模式)
 # PostgreSQL
 
 ## PostgreSQL 的非交互模式
+
+    psql [OPTIONS] [SQL]
+
+参数
+
+- -U：指定要连接的 PostgreSQL 用户。
+- -d：指定要连接的数据库名称。
+- -c：后面跟上要执行的 SQL 命令，需要用引号括起来。
+
+        #查询 public 模式下 users 表的所有记录
+        psql -U postgres -d mydatabase -c "SELECT * FROM public.users;"
+
+        #查看 new_table 的结构
+        psql -U postgres -d mydatabase -c "\d new_table"
+
+        #输出重定向。将 users 表的查询结果保存到 users_result.txt 文件中：
+        psql -U postgres -d mydatabase -c "SELECT * FROM public.users;" > users_result.txt
 
 ## PostgreSQL 的交互模式
 
@@ -117,3 +141,9 @@
 
 查看到表之后就可以使用查询、插入、删除、更改等语句，可以参考可以参考[Sqlite 交互模式下的查询、插入、删除、更新](Sqlite.md#交互模式下的查询、插入、删除、更新)
 
+### 退出交互模式
+
+输入 `quit`或者`exit`或者`\q`或者 Ctrl+D 退出交互模式
+
+    server_store=# quit
+    [root@localhost ~]#
