@@ -37,6 +37,11 @@
 
 ![open /opt/homebrew/etc/nginx](../../../Image/nginx2.png)
 
+看下 nginx.conf 文件中有哪些内容
+
+
+
+
 #### 2.1.3、打开 nginx 安装目录
 
 使用 `open /opt/homebrew/Cellar/nginx`
@@ -77,8 +82,6 @@
 了解 nginx 的基本操作之后，后面就可以使用浏览器访问 nginx 了
 
 ![访问 nginx](../../../Image/nginx9.png)
-
-
 
 ### 2.2、Windows 搭建 nginx
 

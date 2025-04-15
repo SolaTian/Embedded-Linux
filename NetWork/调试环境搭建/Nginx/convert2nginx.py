@@ -13,7 +13,7 @@ from pathlib import Path
 
 def load_config(config_path):
     """加载自定义配置文件"""
-    cfg = configparser.ConfigParser()
+    cfg = configparser.ConfigParser(interpolation=None)
     cfg.read(config_path)
     return cfg
 
@@ -83,11 +83,44 @@ def generate_nginx_config(cfg):
         output.append("        }")
     
     # ===== HTTPS配置 =====
-    if cfg.getboolean('Application', 'https_enabled'):
-        output.append("\n        # HTTPS配置")
-        output.append(f"        listen {cfg.get('Application', 'https_listen_port')} ssl;")
-        output.append(f"        ssl_certificate {cfg.get('security', 'ssl_cert')};")
-        output.append(f"        ssl_certificate_key {cfg.get('security', 'ssl_key')};")
+    try:
+    # 获取 HTTPS 启用状态（默认false）
+        https_enabled = cfg.get(
+            'Application', 'https_enabled', 
+            fallback='false'
+        ).strip().lower() in ('true', 'yes', 'on', '1')
+
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
+        print(f"[WARN] 配置缺失，默认禁用HTTPS: {e}")
+        https_enabled = False
+
+    if https_enabled:
+    # 验证必要参数
+        required_params = ['ssl_cert', 'ssl_key']
+        missing_params = [
+            param for param in required_params 
+            if not cfg.has_option('security', param)
+        ]
+        if missing_params:
+            raise ValueError(
+                f"启用HTTPS需要配置以下参数: {', '.join(missing_params)}"
+            )
+
+        # 验证端口冲突
+        http_port = cfg.get('Application', 'listen_port')
+        https_port = cfg.get('Application', 'https_listen_port')
+        if http_port == https_port:
+            raise ValueError(
+                f"HTTP端口({http_port}) 和 HTTPS端口({https_port}) 冲突"
+            )
+
+        # 生成配置
+        output.extend([
+            "\n        # HTTPS配置",
+            f"        listen {https_port} ssl;",
+            f"        ssl_certificate {cfg.get('security', 'ssl_cert')};",
+            f"        ssl_certificate_key {cfg.get('security', 'ssl_key')};"
+        ])
     
     output.append("    }\n}")
     return '\n'.join(output)
