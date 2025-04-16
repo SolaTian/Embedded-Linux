@@ -37,9 +37,6 @@
 
 ![open /opt/homebrew/etc/nginx](../../../Image/nginx2.png)
 
-看下 nginx.conf 文件中有哪些内容
-
-
 
 
 #### 2.1.3、打开 nginx 安装目录
@@ -85,9 +82,58 @@
 
 ### 2.2、Windows 搭建 nginx
 
-## 3、搭建一个通用的 nginx 服务器
 
-### 3.1、丰富多样的协议
+
+
+
+## 3、nginx.conf 内容详解
+
+下面逐行的来看下 nginx.conf 文件中有哪些内容
+
+![nginx.conf 内容1](../../../Image/nginx10.png)
+
+1. 定义错误的存储位置和日志级别：
+
+    >   error > warn > notice > info > debug
+
+    合理设置日志路径，避免使用 info 级别，会产生大量的日志
+
+2. `events`参数定义连接处理相关的参数，有以下几个关键参数
+   - `worker_connections`：单个工作进程的最大并发连接数  
+   - `multi_accept`：是否一次性接受所有新连接（建议`on`）
+   - `use`：指定事件模型（如`epoll`）
+
+
+![nginx.conf 内容2](../../../Image/nginx11.png)
+
+3. `include mime.types`：加载预定义的 MIME 类型文件（如 .html → text/html）
+
+4. `default_type`：当无法识别文件类型时，默认返回 `application/octet-stream`（浏览器会触发下载行为）
+
+5. `log_format`：定义日志的格式模板（此处命名为 main）
+6. `access_log`：启用访问日志并指定路径和格式
+7. `sendfile`：启用零拷贝技术，提升静态文件传输效率
+8. `tcp_nopush`：仅在 `sendfile on` 时生效，优化网络包发送机制
+9. `keepalive_timeout`：控制客户端连接的保持时间。0 表示禁用 `Keep-Alive`
+10. `gizp on`: 启用响应内容压缩，减少传输体积。当开启时，还可以设置一些额外的参数，比如压缩等级，最小压缩文件大小等。
+
+![nginx.conf 内容3](../../../Image/nginx12.png)
+
+11. `listen 8080; server_name localhost;`:定义一个虚拟主机，接收发送到`localhost:8080`的请求。`server_name`支持多域名/IP
+
+12. `location /post-endpoint`: 注释部分为请求部分，表示仅允许使用 POST 方法，且设置了返回类型和返回响应。
+13. `charset koi8-r`：
+14. `location /`：静态服务资源，访问`http://localhost:8080/` → 返回 `index.html`
+15. `error_page`: 错误页面配置，返回`50x.html`
+
+![](../../../Image/nginx13.png) 
+
+16. 注释部分为 php 支持，暂不研究
+17. 
+
+## 4、搭建一个通用的 nginx 服务器
+
+### 4.1、丰富多样的协议
 
 在客户端开发时，常常会有各种各样的平台或者服务端协议。设想一下，如果能够在这些协议中抽象出一些通用的参数选项保存在一个如`protocol_para.conf`文件中，比如 `protocol=...`，是不是只要根据协议种类手动的修改一下如`protocol=HTTP`或者`protocol=HTTPS`。通过这种方式，可以将各种协议都抽象成一种标准的`conf`文件。抽象出来的参数选项越多，那么这个`protocol_para.conf`文件适用的协议类型就越多。
 
