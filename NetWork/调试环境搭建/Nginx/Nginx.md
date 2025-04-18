@@ -126,18 +126,34 @@
 14. `location /`：静态服务资源，访问`http://localhost:8080/` → 返回 `index.html`
 15. `error_page`: 错误页面配置，返回`50x.html`
 
-![](../../../Image/nginx13.png) 
+![nginx.conf 内容4](../../../Image/nginx13.png) 
 
 16. 注释部分为 php 支持，暂不研究
-17. 
+
+![nginx.conf 内容5](../../../Image/nginx14.png)
+
+17. 第二个 `server` 指定了混合监听模式：通过 `listen` 指令定义了两种监听方式：
+`8000` 端口（默认监听所有 IP），`somename:8080`（监听特定 IP/主机名 `somename` 的 8080 端口）。域名匹配：`server_name` 定义了匹配的域名：主域名 `somename`别名 `alias` 和 `another.alias`
+
+18. 请求处理：`location /` 表示处理所有路径的请求：静态文件根目录为 html（默认相对路径）。默认索引文件为 `index.html` 和 `index.htm`
+
+19. `SSL` 加密通信：监听 443 端口并启用 `SSL`（`listen 443 ssl`）证书文件 `cert.pem` 和私钥文件 `cert.key`(这里使用的是相对路径，建议使用绝对路径，如 `/opt/nginx/ssl/cert.pem`)
+
+20. 性能优化：`SSL` 会话缓存（`shared:SSL:1m` 允许 1MB 内存存储约 4000 个会话）会话超时 5 分钟（5m）
+
+21. 安全增强：加密套件策略 `HIGH:!aNULL:!MD5`（禁用弱算法）优先使用服务端加密套件（`ssl_prefer_server_ciphers on`）
+22. `include server/*`：加载 `servers` 目录下的所有配置文件
+
 
 ## 4、搭建一个通用的 nginx 服务器
+
+上面已经初步的介绍了 nginx 自带的 nginx.conf 文件，通过这个文件，可以在电脑上启用 nginx 服务。也就是说，只要修改这个配置文件，就能获得完全不一样的服务端。
 
 ### 4.1、丰富多样的协议
 
 在客户端开发时，常常会有各种各样的平台或者服务端协议。设想一下，如果能够在这些协议中抽象出一些通用的参数选项保存在一个如`protocol_para.conf`文件中，比如 `protocol=...`，是不是只要根据协议种类手动的修改一下如`protocol=HTTP`或者`protocol=HTTPS`。通过这种方式，可以将各种协议都抽象成一种标准的`conf`文件。抽象出来的参数选项越多，那么这个`protocol_para.conf`文件适用的协议类型就越多。
 
-#### 3.1、总结自己的 protocol_para.conf 文件
+#### 4.1、总结自己的 protocol_para.conf 文件
 
 万事开头难，想要用 nginx 来自动化搭建对应协议的服务端 demo ，就需要尽可能多的对这些协议进行总结。下面只从笔者日常开发中遇到的协议来进行总结，后续遇到新的协议，可以在 `protocol_para.conf`文件中继续总结
 
@@ -153,3 +169,23 @@
 数据格式还可以包括 基础的二进制、RSA 加密、AES 加密、base64 转码，UTF8转码等。
 
 协议内容很多，可以根据不同的应用层协议分成不同的文件，如 HTTP 和 HTTPS 使用`protocol_http.conf`，私有协议使用
+
+
+#### 4.2、从最基本的 HTTP 开始
+
+上面已经介绍过了 nginx 自带的配置文件。现在设想一个最基本的 HTTP 场景
+
+1. 客户端发送请求，方法为：`POST/GET/PUT /test/uri`
+2. 客户端数据传输方式为：请求体
+3. 客户端数据格式与结构：`JSON`/`XML`/原始数据
+4. 服务端对于客户端的头部进行必要的检查：
+   - `uri` 校验（必要）
+   - `Content-Length`校验（必要）
+   - `Content-Type`校验（非必要）
+5. 服务端可以查看对应的错误日志，并且可以在浏览器上显示出相应的成功或者失败页面。
+
+这个场景就是最基本的 HTTP 交互场景。
+
+
+
+#### 4.3、
