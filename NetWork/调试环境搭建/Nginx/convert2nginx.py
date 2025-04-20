@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
-protocol_http.conf 到 nginx.conf 转换脚本
-
-功能特性：
-1. 解析自定义配置格式
-2. 生成符合Nginx语法的配置
-3. 自动处理路径差异和参数映射
+protocol_http.conf 到 nginx.conf 转换脚本 (改进版)
 """
 
 import configparser
@@ -22,9 +17,9 @@ def generate_nginx_config(cfg):
     output = []
     
     # ===== 基础配置 =====
-    output.append(f"worker_processes {cfg.get('performance', 'worker_processes')};")
+    output.append(f"worker_processes {cfg.get('performance', 'worker_processes', fallback='auto')};")
     output.append("events {")
-    output.append(f"    worker_connections {cfg.get('performance', 'max_connections')};")
+    output.append(f"    worker_connections {cfg.get('performance', 'max_connections', fallback='1024')};")
     output.append("}\n")
     
     output.append("http {")
@@ -32,7 +27,8 @@ def generate_nginx_config(cfg):
     output.append("    default_type  application/octet-stream;\n")
     
     # ===== 日志配置 =====
-    log_format = cfg.get('logging', 'log_format').replace('%t', '$time_local') \
+    log_format = cfg.get('logging', 'log_format', fallback='%t %a %m %U %s %B %D') \
+        .replace('%t', '$time_local') \
         .replace('%a', '$remote_addr') \
         .replace('%m', '$request_method') \
         .replace('%U', '$uri') \
@@ -44,93 +40,95 @@ def generate_nginx_config(cfg):
     output.append(f'    error_log {cfg.get("logging", "error_log")};\n')
     
     # ===== 请求处理配置 =====
-    output.append(f"    client_max_body_size {cfg.get('request', 'max_body_size')};")
-    output.append(f"    client_body_buffer_size {cfg.get('request', 'body_buffer_size')};\n")
+    output.append(f"    client_max_body_size {cfg.get('request', 'max_body_size', fallback='1M')};")
+    output.append(f"    client_body_buffer_size {cfg.get('request', 'body_buffer_size', fallback='16K')};\n")
     
-    # ===== 服务配置 =====
+    # ===== 主服务配置 =====
     output.append("    server {")
-    output.append(f"        listen {cfg.get('Application', 'listen_port')};")
-    output.append(f"        server_name {cfg.get('Application', 'server_ip')};\n")
+    output.append(f"        listen {cfg.get('Application', 'server_ip')}:{cfg.get('Application', 'listen_port')};")
+    output.append("        server_name localhost;\n")
     
-    # ===== 路由配置 =====
+    # ===== 核心路由处理 =====
     routes = cfg.items('routes')
     for path, rule in routes:
-        parts = rule.split()
+        path = path.strip('"')  # 去除引号
+        parts = [p.strip() for p in rule.split('|')]
         handler_type, target = parts[0].split('|')
-        params = dict(p.split('=') for p in parts[1:])
+        params = {}
         
-        output.append(f"\n        # 路由规则: {path}")
-        output.append(f"        location ~ ^{path.replace('*', '.*')}$ {{")
+        # 解析参数 (如 methods=GET,POST,PUT)
+        for param in parts[1:]:
+            if '=' in param:
+                key, value = param.split('=', 1)
+                params[key.strip()] = value.strip().upper().replace(',', ' ')
         
-        # 处理方法限制
+        output.append(f"\n        # 路由: {path}")
+        output.append(f"        location = {path} {{")
+        
+        # 方法限制
         if 'methods' in params:
-            methods = params['methods'].upper().split(',')
-            output.append(f"            if ($request_method !~ ^({'|'.join(methods)}) {{")
-            output.append("                return 405;")
+            methods = params['methods'].split()
+            output.append(f"            limit_except {' '.join(methods)} {{")
+            output.append("                deny all;")
             output.append("            }")
         
-        # 处理静态资源
-        if handler_type == 'static':
-            output.append(f"            root {target};")
-            if 'max_age' in params:
-                output.append(f"            expires {params['max_age']}s;")
+        # 必要校验规则
+        output.append("\n            # === 请求头校验 ===")
         
-        # 处理动态路由
-        elif handler_type == 'dynamic':
-            output.append(f"            proxy_pass http://{target};")
-            output.append("            proxy_set_header Host $host;")
+        # URI 校验
+        output.append(f"            if ($request_uri != {path}) {{")
+        output.append("                return 400;")
+        output.append("            }")
+        
+        # Content-Length 校验
+        if cfg.getboolean('request', 'require_content_length', fallback=False):
+            output.append("            if ($http_content_length = '') {")
+            output.append("                return 411;")
+            output.append("            }")
+        
+        # Content-Type 校验
+        allowed_types = cfg.get('request', 'allowed_content_types', fallback='').replace(' ', '').split(',')
+        if allowed_types and allowed_types != ['']:
+            output.append(f"            if ($content_type !~* \"{'|'.join(allowed_types)}\") {{")
+            output.append("                return 415;")
+            output.append("            }")
+        
+        # 动态处理器响应
+        output.append("\n            # === 响应处理 ===")
+        output.append("            add_header Content-Type application/json;")
+        output.append("            return 200 '{\"status\": \"success\"}';")
         
         output.append("        }")
     
-    # ===== HTTPS配置 =====
-    try:
-    # 获取 HTTPS 启用状态（默认false）
-        https_enabled = cfg.get(
-            'Application', 'https_enabled', 
-            fallback='false'
-        ).strip().lower() in ('true', 'yes', 'on', '1')
-
-    except (configparser.NoSectionError, configparser.NoOptionError) as e:
-        print(f"[WARN] 配置缺失，默认禁用HTTPS: {e}")
-        https_enabled = False
-
-    if https_enabled:
-    # 验证必要参数
-        required_params = ['ssl_cert', 'ssl_key']
-        missing_params = [
-            param for param in required_params 
-            if not cfg.has_option('security', param)
-        ]
-        if missing_params:
-            raise ValueError(
-                f"启用HTTPS需要配置以下参数: {', '.join(missing_params)}"
-            )
-
-        # 验证端口冲突
-        http_port = cfg.get('Application', 'listen_port')
-        https_port = cfg.get('Application', 'https_listen_port')
-        if http_port == https_port:
-            raise ValueError(
-                f"HTTP端口({http_port}) 和 HTTPS端口({https_port}) 冲突"
-            )
-
-        # 生成配置
-        output.extend([
-            "\n        # HTTPS配置",
-            f"        listen {https_port} ssl;",
-            f"        ssl_certificate {cfg.get('security', 'ssl_cert')};",
-            f"        ssl_certificate_key {cfg.get('security', 'ssl_key')};"
-        ])
+    # ===== 错误页面配置 =====
+    output.append("\n        # 错误处理")
+    output.append("        error_page 400 411 415 /error;")
+    output.append("        location = /error {")
+    output.append("            internal;")
+    output.append("            return 200 '{\"error\": \"$status\"}';")
+    output.append("        }")
     
     output.append("    }\n}")
     return '\n'.join(output)
 
 if __name__ == '__main__':
-    config = load_config('protocol_http.conf')
-    nginx_conf = generate_nginx_config(config)
-    
-    output_path = Path(__file__).parent / 'nginx.conf'
-    with open(output_path, 'w') as f:
-        f.write(nginx_conf)
-    
-    print(f"配置文件已生成: {output_path}")
+    try:
+        config = load_config('protocol_http.conf')
+        
+        # 必要配置项验证
+        if not config.has_section('Application'):
+            raise ValueError("缺少 [Application] 配置段")
+        
+        nginx_conf = generate_nginx_config(config)
+        
+        output_path = Path(__file__).parent / 'nginx.conf'
+        with open(output_path, 'w') as f:
+            f.write(nginx_conf)
+        
+        print(f"配置文件已生成: {output_path}")
+        print("请执行以下命令验证配置:")
+        print("sudo nginx -t -c", output_path.resolve())
+        
+    except Exception as e:
+        print(f"配置转换失败: {str(e)}")
+        exit(1)
