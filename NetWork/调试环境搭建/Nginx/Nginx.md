@@ -65,6 +65,13 @@
 ![](../../../Image/nginx6.png)
 
 
+启动完 nginx 之后，可以通过`ps -ef | grep nginx` 命令查看进程是否启用成功。
+
+
+![](../../../Image/nginx15.png)
+
+
+
 #### 2.1.5、关闭和重启 nginx 服务
 
 使用 `brew services stop nginx` 和 `brew services restart nginx` 分别对 nginx 进行关闭或者重启
@@ -391,3 +398,23 @@ if __name__ == '__main__':
 ```
 
 #### 4.4、生成自己的 nginx.conf 文件
+
+生成自己的`nginx.conf`文件之后，将`/opt/homebrew/etc/nginx`目录中的`nginx.conf`文件替换。然后执行 `nginx -t`检查当前的配置文件是否存在问题。
+
+
+发现存在
+
+![](../../../Image/nginx16.png)
+
+需要删除对应的pid 文件
+
+![](../../../Image/nginx17.png)
+
+需要sudo 赋权限
+
+
+
+
+
+
+
