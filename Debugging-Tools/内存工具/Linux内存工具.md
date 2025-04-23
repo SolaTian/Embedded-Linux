@@ -161,6 +161,7 @@ top 是一个实施监控工具，用于显示系统资源的使用情况，与 
 
 示例
 
+
     #top
     top - 14:06:23 up 70 days, 16:44,  2 users,  load average: 1.25, 1.32, 1.35
     Tasks: 206 total,   1 running, 205 sleeping,   0 stopped,   0 zombie
