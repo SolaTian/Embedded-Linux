@@ -10,6 +10,8 @@
   - [free](#free)
   - [/proc 目录](#proc-目录)
     - [/proc/meminfo](#procmeminfo)
+- [系统`I/O`使用情况](#系统io使用情况)
+  - [`iostat`](#iostat)
 # 文件系统磁盘使用情况
 
 ## df
@@ -441,4 +443,9 @@ MemFree 表示的是当前系统中完全未使用的、空闲的物理内存数
 
 MemAvailable 表示系统中可以立即分配给应用程序使用的内存总量，包括当前空闲的内存以及可以被回收的缓存内存
 
+# 系统`I/O`使用情况
+
+## `iostat`
+
+`iostat` 是 `Linux`系统中用于监控系统输入/输出（`I/O`）设备负载的核心工具
 
