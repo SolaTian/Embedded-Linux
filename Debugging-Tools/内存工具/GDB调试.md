@@ -1,16 +1,18 @@
 - [coredump](#coredump)
   - [使用 GDB 分析 coredump 文件](#使用-gdb-分析-coredump-文件)
   - [使用 addr2line 分析 coredump 文件](#使用-addr2line-分析-coredump-文件)
+  - [app.nostrip 文件](#appnostrip-文件)
+    - [app 和 app.nostrip 文件的区别和联系](#app-和-appnostrip-文件的区别和联系)
 
 
 # coredump 
 
-coredump 文件是进程崩溃时内存状态的快照，通过分析它可以找出进程崩溃的原因。
+`coredump` 文件是进程崩溃时内存状态的快照，通过分析它可以找出进程崩溃的原因。
 
 
 ## 使用 GDB 分析 coredump 文件
 
-gdb 是一个命令行调试工具。
+`gdb` 是一个命令行调试工具。
 
 gdb 可以调试正在运行的程序
 
@@ -65,3 +67,31 @@ addr2line 是一个将程序地址转换成为文件名和行号的工具。
         addr2line -e <可执行文件> <崩溃地址>
 
 在一些嵌入式 Linux 中，addr2line 这个工具可能会带有交叉编译工具链的前缀。如：arm-hisv300-linux-addr2line
+
+## app.nostrip 文件
+
+在嵌入式设备中，一般升级固件都是由主进程、子进程、脚本、二进制文件等一系列的文件压缩而成的。通过`web`页面将该固件升级或者是通过其他的方式进行升级。
+
+当设备的主进程发生内存泄露时，我们可以获取到内存地址`PC/LR`，为了获取到内存泄漏的具体原因，我们需要使用**含有符号表的未剥离文件**，如`app.nostrip`文件。
+
+
+### app 和 app.nostrip 文件的区别和联系
+
+> `app`: 通过 `strip` 命令移除了调试信息（体积更小），无法用于解析符号。
+> `app.nostrip`: 保留完整符号表和调试信息，专门用于地址解析。
+
+
+|文件类型|用途|是否包含调试信息|
+|-|-|-|
+|`app`|设备实际运行的二进制文件|否|
+|`app.nostrip`|调试符号文件|是|
+
+
+```bash
+#使用 addr2line 工具解析
+addr2line -e app.nostrip <PC> <LR>
+
+#使用 gdb 分析 coredump
+gdb app.nostrip core.dump  # 加载符号文件和 coredump
+(gdb) bt  # 查看调用栈
+```
