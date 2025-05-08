@@ -14,15 +14,15 @@
 
 `gdb` 是一个命令行调试工具。
 
-gdb 可以调试正在运行的程序
+`gdb` 可以调试正在运行的程序
 
     gdb -p <进程ID>
 
-gdb 也可以调试 coredump 文件
+`gdb` 也可以调试 `coredump` 文件
 
     gdb <可执行文件> <coredump 文件名>
 
-不管是哪种方式启用 gdb，都会进入 gdb 调试界面
+不管是哪种方式启用 `gdb`，都会进入 `gdb` 调试界面
 
     (gdb)
 
@@ -42,14 +42,14 @@ gdb 也可以调试 coredump 文件
 - list <函数名>：显示指定函数的源代码。
 - q: 退出 gdb
 
-使用 gdb 调试 coredump 文件，输入 bt 查看程序崩溃时候的调用栈。使用 l 显示崩溃时候的源代码。
+使用 `gdb` 调试 `coredump` 文件，输入 `bt` 查看程序崩溃时候的调用栈。使用 `l` 显示崩溃时候的源代码。
 
-在一些嵌入式 Linux 中，gdb 这个工具可能会带有交叉编译工具链的前缀。如：arm-hisv300-linux-gdb
+在一些嵌入式 Linux 中，`gdb` 这个工具可能会带有交叉编译工具链的前缀。如：`arm-hisv300-linux-gdb`
 
 
 ## 使用 addr2line 分析 coredump 文件
 
-addr2line 是一个将程序地址转换成为文件名和行号的工具。
+`addr2line` 是一个将程序地址转换成为文件名和行号的工具。
 
     addr2line [选项] [地址，地址...]
 
@@ -61,12 +61,12 @@ addr2line 是一个将程序地址转换成为文件名和行号的工具。
 
 分析步骤
 
-1. 从 coredump 中获取到崩溃地址：在 gdb 中使用 bt 命令查看调用栈，找到崩溃发生的地址，或者有时可以从串口等日志信息中直接获取到 Undefined Signal 11 这些段错误信号，会输出 PC 和 LR 的地址。
-2. 使用 addr2line 转换崩溃地址，输出对应的源代码文件和行号。
+1. 从 `coredump` 中获取到崩溃地址：在 `gdb` 中使用 `bt` 命令查看调用栈，找到崩溃发生的地址，或者有时可以从串口等日志信息中直接获取到 `Undefined Signal 11` 这些段错误信号，会输出 `PC` 和 `LR` 的地址。
+2. 使用 `addr2line` 转换崩溃地址，输出对应的源代码文件和行号。
 
         addr2line -e <可执行文件> <崩溃地址>
 
-在一些嵌入式 Linux 中，addr2line 这个工具可能会带有交叉编译工具链的前缀。如：arm-hisv300-linux-addr2line
+在一些嵌入式 Linux 中，`addr2line` 这个工具可能会带有交叉编译工具链的前缀。如：`arm-hisv300-linux-addr2line`
 
 ## app.nostrip 文件
 
