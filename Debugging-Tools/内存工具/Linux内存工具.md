@@ -393,6 +393,8 @@ free 还支持一些选项
 - 网络信息：
   - /proc/net/dev：网络设备状态。
   - /proc/net/tcp：TCP连接状态。
+- 内核信息：
+  - /proc/kmsg:内核信息
 
 通过前面的 top 或者 ps 命令获取到某个进程的 PID，就可以利用 ls /proc/PID/fd 查看当前进程建立的socket 句柄。
 
